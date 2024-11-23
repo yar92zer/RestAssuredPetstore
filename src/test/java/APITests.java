@@ -5,6 +5,7 @@ import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -84,7 +85,6 @@ public class APITests {
                 .post(baseURI + "pet/")
                 .then()
                 .log().all()
-                .time(lessThan(3000L))
                 .assertThat()
                 .statusCode(200)
                 .body("id", equalTo(id))
@@ -92,5 +92,34 @@ public class APITests {
                 .body("status", equalTo("sold"));
     }
 
+    //Тест проверяет статус ответа, корректность данных в JSON (id, name, status, photoUrls) и время выполнения запроса.
 
+    @Test
+    public void myPetTest() {
+        Integer id = 19;
+        String name = "Marti Cat";
+        String status = "stock";
+        String photoUrl = "https://moizver.com/upload/medialibrary/f5a/f5a1cbcd9bfdf5634edfa557c8662a1a.jpg";
+
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("id", id.toString());
+        request.put("name", name);
+        request.put("status", status);
+        request.put("photoUrls", Collections.singletonList(photoUrl));
+
+        given().contentType("application/json")
+                .body(request)
+                .when()
+                .post(baseURI + "pet/")
+                .then()
+                .log().all()
+                .time(lessThan(3000L))
+                .assertThat()
+                .statusCode(200)
+                .body("id", equalTo(id))
+                .body("name", equalTo("Marti Cat"))
+                .body("status", equalTo("stock"))
+                .body("photoUrls[0]", equalTo(photoUrl));
+    }
 }
