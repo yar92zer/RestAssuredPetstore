@@ -5,9 +5,13 @@ import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class APITests {
@@ -62,4 +66,31 @@ public class APITests {
                 .body("message", equalTo("Pet not found"))
                 .body("type", equalTo("error"));
     }
+
+    @Test
+    public void newPetTest() {
+        Integer id = 11;
+        String name = "dogg";
+        String status = "sold";
+
+        Map<String, String> request = new HashMap<>();
+        request.put("id", id.toString());
+        request.put("name", name);
+        request.put("status", status);
+
+        given().contentType("application/json")
+                .body(request)
+                .when()
+                .post(baseURI + "pet/")
+                .then()
+                .log().all()
+                .time(lessThan(3000L))
+                .assertThat()
+                .statusCode(200)
+                .body("id", equalTo(id))
+                .body("name", equalTo("dogg"))
+                .body("status", equalTo("sold"));
+    }
+
+
 }
