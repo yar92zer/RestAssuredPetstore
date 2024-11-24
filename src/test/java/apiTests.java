@@ -3,6 +3,7 @@ import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -15,18 +16,19 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class APITests {
-    private final int unexistingPetId = 19;
+public class apiTests {
+    private final int nonexistentPetId = 19;
     private RequestSpecification requestSpecification;
 
     @BeforeEach
     public void setUp() {
         RestAssured.baseURI = "https://petstore.swagger.io/v2/";
+
     }
 
     @Test
     public void petNotFoundTestWithAssert() {
-        RestAssured.baseURI += "pet/" + unexistingPetId;
+        RestAssured.baseURI += "pet/" + nonexistentPetId;
 
         requestSpecification = RestAssured.given();
 
@@ -40,7 +42,7 @@ public class APITests {
 
     @Test
     public void petNotFoundTest() {
-        RestAssured.baseURI += "pet/" + unexistingPetId;
+        RestAssured.baseURI += "pet/" + nonexistentPetId;
 
         requestSpecification = RestAssured.given();
 
@@ -58,9 +60,9 @@ public class APITests {
     }
 
     @Test
-    public void petFoundTest_BDD() {
+    public void petFoundTestBdd() {
         given().when()
-                .get(baseURI + "pet/{id}", unexistingPetId)
+                .get(baseURI + "pet/{id}", nonexistentPetId)
                 .then()
                 .log().all()
                 .statusCode(404)
@@ -92,9 +94,8 @@ public class APITests {
                 .body("status", equalTo("sold"));
     }
 
-    //Тест проверяет статус ответа, корректность данных в JSON (id, name, status, photoUrls) и время выполнения запроса.
-
     @Test
+    @DisplayName("Тест проверяет статус ответа, корректность данных в JSON (id, name, status, photoUrls) и время выполнения запроса.")
     public void myPetTest() {
         Integer id = 19;
         String name = "Marti Cat";
