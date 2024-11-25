@@ -1,6 +1,5 @@
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
-import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,110 +16,114 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class apiTests {
-    private final int nonexistentPetId = 19;
+    private static final int NONEXISTENT_PET_ID = 19;
+    private static final int NEW_PET_ID = 11;
+    private static final int MY_PET_ID = 20;
+    private static final String BASE_PATH = "pet/";
+
     private RequestSpecification requestSpecification;
 
     @BeforeEach
     public void setUp() {
-        RestAssured.baseURI = "https://petstore.swagger.io/v2/";
+        baseURI = "https://petstore.swagger.io/v2/";
+        requestSpecification = given().contentType("application/json");
 
+        deletePetIfExists(NONEXISTENT_PET_ID);
+        deletePetIfExists(NEW_PET_ID);
+        deletePetIfExists(MY_PET_ID);
+    }
+
+    private void deletePetIfExists(int petId) {
+        Response response = requestSpecification.when().delete(BASE_PATH + petId);
+        if (response.statusCode() != 404) {
+            System.out.println("Deleted pet with ID: " + petId);
+        }
+    }
+
+    private void createPet(int petId, String name, String status) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("id", petId);
+        request.put("name", name);
+        request.put("status", status);
+
+        requestSpecification.body(request)
+                .when()
+                .post(BASE_PATH)
+                .then()
+                .statusCode(200);
     }
 
     @Test
     public void petNotFoundTestWithAssert() {
-        RestAssured.baseURI += "pet/" + nonexistentPetId;
-
-        requestSpecification = RestAssured.given();
-
-        Response response = requestSpecification.get();
+        Response response = requestSpecification.when().get(BASE_PATH + NONEXISTENT_PET_ID);
         System.out.println("Response: " + response.asPrettyString());
 
-        assertEquals(404, response.statusCode(), "Нет тот status code");
-        assertEquals("HTTP/1.1 404 Not Found", response.statusLine(), "Не корректная status line");
-        assertEquals("Pet not found", response.jsonPath().get("message"), "Не то собщение об ошибке");
+        assertEquals(404, response.statusCode(), "Некорректный статус код");
+        assertEquals("HTTP/1.1 404 Not Found", response.statusLine(), "Некорректная статус линия");
+        assertEquals("Pet not found", response.jsonPath().get("message"), "Некорректное сообщение об ошибке");
     }
 
     @Test
     public void petNotFoundTest() {
-        RestAssured.baseURI += "pet/" + nonexistentPetId;
-
-        requestSpecification = RestAssured.given();
-
-        Response response = requestSpecification.get();
-
-        System.out.println("Response: " + response.asPrettyString());
-
-        ValidatableResponse validatableResponse = response.then();
-
-        validatableResponse.statusCode(404);
-
-        validatableResponse.statusLine("HTTP/1.1 404 Not Found");
-
-        validatableResponse.body("message", equalTo("Pet not found"));
+        requestSpecification.when()
+                .get(BASE_PATH + NONEXISTENT_PET_ID)
+                .then()
+                .statusCode(404)
+                .statusLine("HTTP/1.1 404 Not Found")
+                .body("message", equalTo("Pet not found"));
     }
 
     @Test
     public void petFoundTestBdd() {
-        given().when()
-                .get(baseURI + "pet/{id}", nonexistentPetId)
+        createPet(NONEXISTENT_PET_ID, "Test Pet", "available");
+
+        given()
+                .when()
+                .get(BASE_PATH + NONEXISTENT_PET_ID)
                 .then()
                 .log().all()
-                .statusCode(404)
-                .body("message", equalTo("Pet not found"))
-                .body("type", equalTo("error"));
+                .statusCode(200)
+                .body("name", equalTo("Test Pet"))
+                .body("status", equalTo("available"));
     }
 
     @Test
     public void newPetTest() {
-        Integer id = 11;
-        String name = "dogg";
-        String status = "sold";
+        createPet(NEW_PET_ID, "dogg", "sold");
 
-        Map<String, String> request = new HashMap<>();
-        request.put("id", id.toString());
-        request.put("name", name);
-        request.put("status", status);
-
-        given().contentType("application/json")
-                .body(request)
+        given()
                 .when()
-                .post(baseURI + "pet/")
+                .get(BASE_PATH + NEW_PET_ID)
                 .then()
                 .log().all()
-                .assertThat()
                 .statusCode(200)
-                .body("id", equalTo(id))
                 .body("name", equalTo("dogg"))
                 .body("status", equalTo("sold"));
     }
 
     @Test
-    @DisplayName("Тест проверяет статус ответа, корректность данных в JSON (id, name, status, photoUrls) и время выполнения запроса.")
-    public void myPetTest() {
-        Integer id = 19;
+    @DisplayName("Тест проверяет создание питомца с фотографией")
+    public void createPetWithPhotoTest() {
         String name = "Marti Cat";
         String status = "stock";
-        String photoUrl = "https://moizver.com/upload/medialibrary/f5a/f5a1cbcd9bfdf5634edfa557c8662a1a.jpg";
-
+        String photoUrl = "https://example.com/photo.jpg";
 
         Map<String, Object> request = new HashMap<>();
-        request.put("id", id.toString());
+        request.put("id", MY_PET_ID);
         request.put("name", name);
         request.put("status", status);
         request.put("photoUrls", Collections.singletonList(photoUrl));
 
-        given().contentType("application/json")
-                .body(request)
+        requestSpecification.body(request)
                 .when()
-                .post(baseURI + "pet/")
+                .post(BASE_PATH)
                 .then()
                 .log().all()
                 .time(lessThan(3000L))
-                .assertThat()
                 .statusCode(200)
-                .body("id", equalTo(id))
-                .body("name", equalTo("Marti Cat"))
-                .body("status", equalTo("stock"))
+                .body("id", equalTo(MY_PET_ID))
+                .body("name", equalTo(name))
+                .body("status", equalTo(status))
                 .body("photoUrls[0]", equalTo(photoUrl));
     }
 }
